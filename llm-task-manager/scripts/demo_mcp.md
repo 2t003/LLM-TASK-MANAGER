@@ -1,150 +1,183 @@
 # Démo MCP — LLM Task Manager
 
+## Contexte (identique à la démo REST)
+
+- **Henri** — PO de *FieldConnect*, une app de coordination terrain en usine
+- **Marie** — PM de la suite applicative, vision stratégique
+
+Le serveur MCP expose 25 tools qui appellent la même logique métier que l'API REST.
+
+---
+
 ## Prérequis
 
-Le fichier `.cursor/mcp.json` est déjà configuré à la racine du projet.
-Cursor détecte automatiquement le serveur MCP au redémarrage.
-
-> **Vérification** : dans Cursor, aller dans Settings → MCP → le serveur `llm-task-manager` doit apparaître avec ses tools.
+Le fichier `.cursor/mcp.json` est configuré. Redémarrer Cursor si nécessaire.
+Vérifier dans **Settings → MCP** que `llm-task-manager` apparaît avec un point vert.
 
 ---
 
-## Scénario de démo (10 min MCP)
+## Scénario de démo — Prompts à dérouler
 
-Ouvrir une conversation avec l'agent Cursor et lui demander d'utiliser les tools MCP.
-Voici les prompts à dérouler dans l'ordre :
-
----
-
-### 1. Créer un projet
-
-> **Prompt** : "Crée un projet appelé 'Application Mobile Banking' avec la description 'App mobile pour consultation de comptes et virements'."
-
-**Tool attendu** : `create_project`
-**Vérification** : un UUID de projet est retourné.
+### PARTIE 1 — Henri structure le backlog terrain
 
 ---
 
-### 2. Créer des epics
+**Prompt 1** — Créer le projet
 
-> **Prompt** : "Dans ce projet, crée deux epics : 'Authentification' et 'Consultation de comptes'."
+> "Crée un projet appelé 'FieldConnect' avec la description 'Application de coordination terrain pour usines — gestion des tournées opérateurs, alertes maintenance et rapports de shift'."
 
-**Tool attendu** : `create_epic` (×2)
-
----
-
-### 3. Créer des stories avec estimation
-
-> **Prompt** : "Dans l'epic Authentification, crée les stories suivantes :
-> - 'Login par email/password' (8 points, priorité high)
-> - 'Login biométrique' (13 points, priorité critical, assignée à Bob)
-> - 'Écran mot de passe oublié' (3 points, priorité medium)"
-
-**Tool attendu** : `create_story` (×3)
-**Point à montrer** : les story points respectent la suite Fibonacci (3, 8, 13).
+Tool : `create_project`
 
 ---
 
-### 4. Tester une règle métier (story points invalides)
+**Prompt 2** — Créer les epics depuis les observations terrain
 
-> **Prompt** : "Crée une story 'Test invalide' avec 7 story points."
+> "Dans le projet FieldConnect, crée trois epics :
+> 1. 'Alertes maintenance prédictive'
+> 2. 'Gestion des shifts et rotations'
+> 3. 'Dashboard temps réel usine'"
 
-**Résultat attendu** : erreur — 7 n'est pas dans la suite Fibonacci (0,1,2,3,5,8,13).
-**Point à montrer** : le LLM reçoit un message d'erreur clair et peut le relayer.
-
----
-
-### 5. Rechercher des stories
-
-> **Prompt** : "Recherche toutes les stories qui contiennent 'login'."
-
-**Tool attendu** : `search_stories`
+Tool : `create_epic` (×3)
 
 ---
 
-### 6. Créer un sprint et y affecter des stories
+**Prompt 3** — Créer les stories avec estimation terrain
 
-> **Prompt** : "Crée un sprint 'Sprint 1 - Auth' du 17 février au 2 mars 2026, puis affecte-y les stories Login email et Login biométrique."
+> "Dans l'epic 'Alertes maintenance prédictive', crée ces stories :
+> - 'Notification push quand un capteur dépasse le seuil critique' — 8 points, priorité critical, assignée à Henri
+> - 'Historique des alertes maintenance sur 30 jours' — 5 points, priorité high, assignée à Lucas
+>
+> Dans l'epic 'Gestion des shifts', crée :
+> - 'Planning de rotation des opérateurs (vue semaine)' — 13 points, priorité high, assignée à Sarah
+> - 'Rapport de passation de shift (formulaire mobile)' — 3 points, priorité medium, assignée à Lucas"
 
-**Tools attendus** : `create_sprint`, `add_story_to_sprint` (×2)
-
----
-
-### 7. Démarrer le sprint
-
-> **Prompt** : "Démarre le Sprint 1."
-
-**Tool attendu** : `start_sprint`
+Tool : `create_story` (×4)
 
 ---
 
-### 8. Workflow de statuts
+**Prompt 4** — ERREUR : estimation invalide
 
-> **Prompt** : "Fais passer la story 'Login email' de backlog à todo, puis in_progress, puis in_review, et enfin done."
+> "Crée une story 'Test capteur zone B' avec 7 story points."
 
-**Tool attendu** : `update_story` (×4 transitions)
-**Point à montrer** : le workflow strict est respecté étape par étape.
-
----
-
-### 9. Tester une transition interdite
-
-> **Prompt** : "Remets la story 'Login email' en in_progress."
-
-**Résultat attendu** : erreur — pas de retour depuis `done`.
-**Point à montrer** : le serveur MCP renvoie un message métier explicite au LLM.
+Résultat attendu : **erreur** — 7 n'est pas dans la suite Fibonacci (0,1,2,3,5,8,13).
 
 ---
 
-### 10. Tester la clôture de sprint (bloquée)
+**Prompt 5** — Recherche et filtrage
 
-> **Prompt** : "Clôture le Sprint 1."
+> "Quelles sont les stories critiques ? Et qu'est-ce qui est assigné à Lucas ?"
 
-**Résultat attendu** : erreur — la story 'Login biométrique' n'est pas encore `done`.
-**Point à montrer** : règle métier « toutes les stories doivent être done ».
-
----
-
-### 11. Terminer et clôturer
-
-> **Prompt** : "Fais passer 'Login biométrique' jusqu'à done, puis clôture le sprint."
-
-**Tools attendus** : `update_story` (×4), `close_sprint`
+Tools : `list_stories` avec filtres `priority=critical`, `assignee=lucas`
 
 ---
 
-### 12. Commenter et documenter
-
-> **Prompt** : "Ajoute un commentaire sur la story Login email : 'Tests unitaires OK, PR mergée'. Puis crée un document 'Spec Auth' avec un résumé de l'architecture d'authentification."
-
-**Tools attendus** : `add_comment`, `create_document`
+### PARTIE 2 — Henri gère le Sprint 1
 
 ---
 
-### 13. Vue d'ensemble
+**Prompt 6** — Sprint + affectation
 
-> **Prompt** : "Liste tous les sprints du projet et toutes les stories avec leur statut."
+> "Crée un sprint 'Sprint 1 — Alertes maintenance MVP' du 17 février au 2 mars 2026. Affecte-y les deux stories de l'epic maintenance."
 
-**Tools attendus** : `list_sprints`, `list_stories`
+Tools : `create_sprint`, `add_story_to_sprint` (×2)
 
 ---
 
-## Règles métier démontrées via MCP
+**Prompt 7** — Démarrage
 
-| Règle | Scénario | Résultat |
+> "Démarre le Sprint 1."
+
+Tool : `start_sprint`
+
+---
+
+**Prompt 8** — Workflow complet
+
+> "Fais avancer la story 'Notification push capteurs' dans le workflow : passe-la en todo, puis in_progress, puis in_review, et enfin done."
+
+Tool : `update_story` (×4 transitions)
+Point à montrer : le workflow strict est respecté étape par étape.
+
+---
+
+**Prompt 9** — ERREUR : retour depuis done
+
+> "Remets la story 'Notification push capteurs' en in_progress."
+
+Résultat attendu : **erreur** — done est un état final, pas de retour possible.
+
+---
+
+**Prompt 10** — ERREUR : clôture impossible
+
+> "Clôture le Sprint 1."
+
+Résultat attendu : **erreur** — la story 'Historique alertes' n'est pas done.
+
+---
+
+**Prompt 11** — Terminer et clôturer
+
+> "Fais passer 'Historique des alertes' jusqu'à done, puis clôture le sprint."
+
+Tools : `update_story` (×4), `close_sprint`
+
+---
+
+### PARTIE 3 — Marie documente et analyse
+
+---
+
+**Prompt 12** — Commentaires
+
+> "Ajoute un commentaire sur la story des notifications : 'Intégration capteurs OK. Seuils configurables par zone. Tests E2E passés en staging.'
+> Et un commentaire sur l'epic maintenance : 'Sprint 1 livré. MVP alertes opérationnel. Retours terrain attendus la semaine prochaine.'"
+
+Tools : `add_comment` (×2)
+
+---
+
+**Prompt 13** — Rétrospective
+
+> "Crée un document 'Rétrospective Sprint 1 — Alertes maintenance MVP' avec :
+> - Ce qui a bien fonctionné : livraison dans les temps, collab Henri/Lucas, tests terrain validés J+8
+> - À améliorer : story notifications sous-estimée, manque de specs seuils par zone
+> - Actions : jeu de données capteurs test, documenter seuils critiques, session terrain Sprint 2"
+
+Tool : `create_document`
+
+---
+
+**Prompt 14** — Problem Statement Sprint 2
+
+> "Crée un document 'Problem Statement — Gestion des shifts' expliquant le problème de passation de shift en usine : pas de visibilité sur les rotations, passation orale, 15% d'incidents post-shift liés à un défaut d'info. Solution proposée : formulaire mobile, planning visible, notifications."
+
+Tool : `create_document`
+
+---
+
+**Prompt 15** — Vue d'ensemble
+
+> "Liste tous les sprints et toutes les stories du projet FieldConnect avec leur statut."
+
+Tools : `list_sprints`, `list_stories`
+
+---
+
+## Résumé des règles métier démontrées
+
+| Règle | Prompt | Résultat |
 |---|---|---|
-| Story points Fibonacci | Création avec 7 points | Erreur |
-| Workflow strict | backlog → todo → ... → done | OK |
-| Pas de retour depuis done | done → in_progress | Erreur |
-| Clôture sprint bloquée | Sprint avec stories ≠ done | Erreur |
-| Affectation story/sprint | add_story_to_sprint | OK |
-| Parité REST/MCP | Mêmes services, mêmes règles | OK |
+| Story points Fibonacci | #4 : 7 points | Erreur |
+| Workflow strict | #8 : backlog → done | OK étape par étape |
+| Pas de retour depuis done | #9 : done → in_progress | Erreur |
+| Sprint non clôturable | #10 : stories ≠ done | Erreur |
+| Parité REST / MCP | Même scénario, mêmes résultats | OK |
 
----
+## Points clés pour les questions du jury
 
-## Points clés à mentionner pendant la démo
-
-1. **Parité REST / MCP** : les tools MCP appellent les mêmes services que les routes REST — même validation, mêmes règles métier, mêmes erreurs.
-2. **Descriptions optimisées LLM** : chaque tool a une description claire pour guider le LLM.
-3. **Sécurité** : transport stdio (pas d'exposition réseau), même RBAC que REST.
-4. **Architecture** : séparation API ↔ Services ↔ ORM ↔ DB (défense en profondeur).
+1. **Parité REST / MCP** — les tools MCP appellent les mêmes services que l'API REST
+2. **Défense en profondeur** — Pydantic → Auth → Service Layer → SQL constraints
+3. **Persona-driven** — Henri structure le backlog, Marie analyse et documente
+4. **Validation humaine** — le LLM propose, l'humain confirme (cf. ARCHITECTURE.md §3.3)
+5. **Transport stdio** — pas d'exposition réseau, sécurité maximale pour le MCP local
