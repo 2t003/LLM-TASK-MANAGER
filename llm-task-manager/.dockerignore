@@ -1,0 +1,14 @@
+.venv/
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.cursor/
+.pytest_cache/
+tests/
+*.db
+*.sqlite
+*.egg-info/
+dist/
+build/
+.env

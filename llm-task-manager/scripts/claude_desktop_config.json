@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "llm-task-manager": {
+      "command": "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+      "args": ["-m", "app.mcp"],
+      "cwd": "/Users/tetedanklou/Documents/LLM TASK MANAGER/llm-task-manager"
+    }
+  }
+}
