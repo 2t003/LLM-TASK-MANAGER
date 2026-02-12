@@ -12,7 +12,7 @@ Ce module exposera les routers FastAPI pour les entités :
 
 from fastapi import APIRouter
 
-from app.api import comments, documents, epics, projects, sprints, stories
+from app.api import comments, documents, epics, projects, sprints, stories, story_descriptions
 
 router = APIRouter()
 
@@ -20,6 +20,7 @@ router = APIRouter()
 router.include_router(projects.router)
 router.include_router(epics.router)
 router.include_router(stories.router)
+router.include_router(story_descriptions.router)
 router.include_router(sprints.router)
 router.include_router(comments.router)
 router.include_router(documents.router)

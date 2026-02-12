@@ -135,6 +135,36 @@ class StoryOut(ORMBaseModel):
 
 
 # ---------------------------------------------------------------------------
+# StoryDescription
+# ---------------------------------------------------------------------------
+
+
+class StoryDescriptionBase(BaseModel):
+    description: str = Field(..., description="Description détaillée de la user story.")
+    acceptance_criteria: Optional[str] = Field(
+        default=None, description="Critères d'acceptation de la story."
+    )
+
+
+class StoryDescriptionCreate(StoryDescriptionBase):
+    story_id: UUID
+
+
+class StoryDescriptionUpdate(BaseModel):
+    description: Optional[str] = None
+    acceptance_criteria: Optional[str] = None
+
+
+class StoryDescriptionOut(ORMBaseModel):
+    id: UUID
+    story_id: UUID
+    description: str
+    acceptance_criteria: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+
+# ---------------------------------------------------------------------------
 # Sprint
 # ---------------------------------------------------------------------------
 
@@ -246,6 +276,11 @@ __all__ = [
     "StoryCreate",
     "StoryUpdate",
     "StoryOut",
+    # StoryDescriptions
+    "StoryDescriptionBase",
+    "StoryDescriptionCreate",
+    "StoryDescriptionUpdate",
+    "StoryDescriptionOut",
     # Sprints
     "SprintBase",
     "SprintCreate",

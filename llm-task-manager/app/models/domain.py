@@ -135,6 +135,11 @@ class Story(SQLModel, table=True):
     project: Project = Relationship(back_populates="stories")
     epic: Optional[Epic] = Relationship(back_populates="stories")
 
+    story_description: Optional["StoryDescription"] = Relationship(
+        back_populates="story",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan", "uselist": False},
+    )
+
     sprint_history: List["StorySprintHistory"] = Relationship(
         back_populates="story",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"},
@@ -188,6 +193,23 @@ class StorySprintHistory(SQLModel, table=True):
 
     story: Story = Relationship(back_populates="sprint_history")
     sprint: Sprint = Relationship(back_populates="story_history")
+
+
+class StoryDescription(SQLModel, table=True):
+    """Description détaillée d'une user story (relation one-to-one avec Story)."""
+
+    __tablename__ = "story_descriptions"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    story_id: UUID = Field(foreign_key="stories.id", index=True, unique=True)
+
+    description: str = Field(default="")
+    acceptance_criteria: Optional[str] = Field(default=None)
+
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+    story: Story = Relationship(back_populates="story_description")
 
 
 class Comment(SQLModel, table=True):
@@ -252,6 +274,7 @@ __all__ = [
     "Epic",
     "Story",
     "Sprint",
+    "StoryDescription",
     "StorySprintHistory",
     "Comment",
     "DocumentTemplate",

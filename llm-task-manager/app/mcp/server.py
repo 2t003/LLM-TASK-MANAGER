@@ -28,6 +28,7 @@ from app.models import (
     Project,
     Sprint,
     Story,
+    StoryDescription,
     StoryPriority,
     StoryStatus,
     schemas as sch,
@@ -284,6 +285,107 @@ async def search_stories(q: str) -> List[Dict[str, Any]]:
         stmt = select(Story).where(Story.title.ilike(f"%{q}%")).order_by(Story.created_at.desc())
         results = db.exec(stmt).all()
         return [sch.StoryOut.model_validate(s).model_dump() for s in results]
+
+
+# ---------------------------------------------------------------------------
+# Story Descriptions
+# ---------------------------------------------------------------------------
+
+
+@server.tool()
+async def create_story_description(
+    story_id: str,
+    description: str,
+    acceptance_criteria: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Crée une description détaillée pour une story.
+    Chaque story ne peut avoir qu'une seule description.
+    """
+    payload = sch.StoryDescriptionCreate(
+        story_id=UUID(story_id),
+        description=description,
+        acceptance_criteria=acceptance_criteria,
+    )
+    with _session() as db:
+        story = db.get(Story, payload.story_id)
+        if not story:
+            raise RuntimeError("STORY_NOT_FOUND: Story not found")
+
+        existing = db.exec(
+            select(StoryDescription).where(StoryDescription.story_id == payload.story_id)
+        ).first()
+        if existing:
+            raise RuntimeError(
+                "DESCRIPTION_EXISTS: A description already exists for this story. Use update_story_description instead."
+            )
+
+        desc = StoryDescription(
+            story_id=payload.story_id,
+            description=payload.description,
+            acceptance_criteria=payload.acceptance_criteria,
+        )
+        db.add(desc)
+        db.commit()
+        db.refresh(desc)
+        return sch.StoryDescriptionOut.model_validate(desc).model_dump()
+
+
+@server.tool()
+async def get_story_description(story_id: str) -> Dict[str, Any]:
+    """Récupère la description d'une story par l'identifiant de la story."""
+    with _session() as db:
+        desc = db.exec(
+            select(StoryDescription).where(StoryDescription.story_id == UUID(story_id))
+        ).first()
+        if not desc:
+            raise RuntimeError("DESCRIPTION_NOT_FOUND: No description found for this story")
+        return sch.StoryDescriptionOut.model_validate(desc).model_dump()
+
+
+@server.tool()
+async def update_story_description(
+    story_id: str,
+    description: Optional[str] = None,
+    acceptance_criteria: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Met à jour la description d'une story (description et/ou critères d'acceptation)."""
+    data: Dict[str, Any] = {}
+    if description is not None:
+        data["description"] = description
+    if acceptance_criteria is not None:
+        data["acceptance_criteria"] = acceptance_criteria
+
+    payload = sch.StoryDescriptionUpdate(**data)
+    with _session() as db:
+        desc = db.exec(
+            select(StoryDescription).where(StoryDescription.story_id == UUID(story_id))
+        ).first()
+        if not desc:
+            raise RuntimeError("DESCRIPTION_NOT_FOUND: No description found for this story")
+
+        update_data = payload.model_dump(exclude_unset=True)
+        for field, value in update_data.items():
+            setattr(desc, field, value)
+
+        db.add(desc)
+        db.commit()
+        db.refresh(desc)
+        return sch.StoryDescriptionOut.model_validate(desc).model_dump()
+
+
+@server.tool()
+async def delete_story_description(story_id: str) -> Dict[str, str]:
+    """Supprime la description d'une story."""
+    with _session() as db:
+        desc = db.exec(
+            select(StoryDescription).where(StoryDescription.story_id == UUID(story_id))
+        ).first()
+        if not desc:
+            raise RuntimeError("DESCRIPTION_NOT_FOUND: No description found for this story")
+        db.delete(desc)
+        db.commit()
+        return {"status": "deleted", "story_id": story_id}
 
 
 # ---------------------------------------------------------------------------
